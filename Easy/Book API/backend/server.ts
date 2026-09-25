@@ -48,7 +48,7 @@ app.get("/book", async (req, res) => {
 
         const result = await pool.query(
             `select b.id, b.title, b.created_At, a.id as author_id, a.name as author_name, a.email as author_email from book as b join author as a on b.author_id = a.id${whereClause} order by b.created_At desc, b.id desc limit $${values.length + 1} offset $${values.length + 2}`,
-            [ ...values, limitNum, offset]
+            [...values, limitNum, offset]
         );
 
         const totalCnt = await pool.query(
@@ -145,6 +145,20 @@ app.patch("/book/:id", async (req, res) => {
         }
         console.log(error);
         return res.status(500).json({ error: "Internal server error" });
+    }
+})
+
+app.delete("/book/:id", async (req, res) => {
+    try {
+        const { id } = req.params;
+        const results = await pool.query(
+            "delete from book where id = $1",
+            [id]
+        )
+        if (results.rowCount === 0) return res.status(404).json({ error: "Book not found" });
+        return res.status(204).send();
+    } catch (error) {
+        return res.status(500).json({ error: "Internal server errror " });
     }
 })
 
