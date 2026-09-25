@@ -75,7 +75,7 @@ app.post("/book", async (req, res) => {
         if (typeof title !== "string" || title.trim().length === 0) return res.status(400).json({ error: "Title is required" });
         const result = await pool.query(
             "insert into book (author_id, title) values ($1, $2) returning *",
-            [author_id, title]
+            [author_id, title.trim()]
         );
         return res.status(201).json(result.rows[0]);
     } catch (error) {
@@ -151,14 +151,17 @@ app.patch("/book/:id", async (req, res) => {
 app.delete("/book/:id", async (req, res) => {
     try {
         const { id } = req.params;
+        const bookId = Number(id);
+        if (!Number.isInteger(bookId) || bookId <= 0) return res.status(400).json({ error: "Invalid Id" });
         const results = await pool.query(
             "delete from book where id = $1",
-            [id]
+            [bookId]
         )
         if (results.rowCount === 0) return res.status(404).json({ error: "Book not found" });
         return res.status(204).send();
     } catch (error) {
-        return res.status(500).json({ error: "Internal server errror " });
+        console.log(error);
+        return res.status(500).json({ error: "Internal server error" });
     }
 })
 
@@ -181,10 +184,13 @@ app.post("/author", async (req, res) => {
         if (typeof email !== "string" || email.trim().length === 0) return res.status(400).json({ error: "Email is required" });
         const result = await pool.query(
             "insert into author (name, email) values ($1, $2) returning *",
-            [name, email]
+            [name.trim(), email.trim()]
         );
         return res.status(201).json(result.rows[0]);
     } catch (error) {
+        if (error instanceof DatabaseError && error.code === "23505") {
+            return res.status(409).json({ error: "Email already exists" });
+        }
         console.log(error);
         return res.status(500).json({ error: "Internal server error" });
     }
