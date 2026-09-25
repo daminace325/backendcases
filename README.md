@@ -1,4 +1,10 @@
-# Backend Setup
+# Backend Practice
+
+Express + TypeScript + PostgreSQL practice projects, grouped by difficulty.
+
+To run an existing project, `cd` into its `backend/` folder, then `npm install` and `npm run dev`.
+
+The rest of this file is the recipe for starting a new one.
 
 ## 1. Initialize Node.js Project
 
@@ -28,6 +34,17 @@ npm install -D typescript tsx @types/node @types/express @types/pg
 npx tsc --init
 ```
 
+In `tsconfig.json`, enable Node types so core modules and `process` resolve:
+
+```json
+{
+  "compilerOptions": {
+    "lib": ["esnext"],
+    "types": ["node"]
+  }
+}
+```
+
 Create the source directory:
 
 ```text
@@ -37,10 +54,11 @@ src/
 
 ## 4. Configure Development Script
 
-Add to `package.json`:
+Add to `package.json`. `"type": "module"` is required for the `nodenext` module setting:
 
 ```json
 {
+  "type": "module",
   "scripts": {
     "dev": "tsx src/server.ts"
   }
@@ -71,7 +89,7 @@ app.listen(PORT, () => {
 ## 6. Start PostgreSQL with Docker
 
 ```bash
-docker run --name todo-postgres -e POSTGRES_USER=postgres -e POSTGRES_PASSWORD=postgres -e POSTGRES_DB=todo_app -p 5432:5432 -d postgres:18
+docker run --name <project-name>-postgres -e POSTGRES_USER=postgres -e POSTGRES_PASSWORD=postgres -e POSTGRES_DB=<database-name> -p 5432:5432 -d postgres:18
 ```
 
 Check that it is running:
@@ -79,6 +97,14 @@ Check that it is running:
 ```bash
 docker ps
 ```
+
+The container persists across reboots, so restart it instead of re-running `docker run`:
+
+```bash
+docker start <project-name>-postgres
+```
+
+Only one container can hold port `5432`. Stop the other one, or map a different host port with `-p 5433:5432`.
 
 ## 7. PostgreSQL Connection
 
@@ -93,6 +119,8 @@ const pool = new Pool({
     port: 5432
 });
 ```
+
+Inline credentials are fine for local practice. Move them to `.env` (already git-ignored) for anything real.
 
 Connection flow:
 
@@ -139,19 +167,31 @@ View data:
 SELECT * FROM <table-name>;
 ```
 
-## Setup Checklist
+## Setup Flow
 
-- [ ] Node project initialized
-- [ ] Express installed
-- [ ] PostgreSQL `pg` installed
-- [ ] TypeScript configured
-- [ ] `tsx` configured
-- [ ] Express server running
-- [ ] PostgreSQL Docker container running
-- [ ] PostgreSQL database created
-- [ ] `pg` Pool configured
-- [ ] Database schema created
-- [ ] Schema verified
+```text
+Node project initialized
+    ↓
+Express installed
+    ↓
+pg installed
+    ↓
+TypeScript configured
+    ↓
+tsx configured
+    ↓
+Express server running
+    ↓
+PostgreSQL container running
+    ↓
+Database created
+    ↓
+pg Pool configured
+    ↓
+Schema created
+    ↓
+Schema verified
+```
 
 ## Development Flow
 
@@ -171,4 +211,10 @@ SQL query
 Database
     ↓
 HTTP response
+```
+
+Pass user input as query parameters, never string concatenation:
+
+```ts
+await pool.query("SELECT * FROM books WHERE id = $1", [id]);
 ```
