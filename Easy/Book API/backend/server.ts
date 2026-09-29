@@ -203,7 +203,7 @@ app.delete("/author/:id", async (req, res) => {
         const author_id = Number(id);
         if (!Number.isInteger(author_id) || author_id <= 0) return res.status(400).json({ error: "Invalid author id " });
         const results = await pool.query(
-            "delete from author where author_id = $1",
+            "delete from author where id = $1",
             [author_id]
         );
         if (results.rowCount === 0) return res.status(404).json({ error: "Author not found" });
@@ -211,6 +211,50 @@ app.delete("/author/:id", async (req, res) => {
     } catch (error) {
         if (error instanceof DatabaseError && error.code === "23503") {
             return res.status(409).json({ error: "Cannot delete author because books still reference this author" });
+        }
+        console.log(error);
+        return res.status(500).json({ error: "Internal server error" });
+    }
+})
+
+app.patch("/author/:id", async (req, res) => {
+    try {
+        const { id } = req.params;
+        const author_id = Number(id);
+
+        if (!Number.isInteger(author_id) || author_id <= 0) return res.status(400).json({ error: "Invalid Author id" });
+
+        const { name, email } = req.body;
+
+        const condition: any[] = [];
+        const values: any[] = [];
+
+        if (name !== undefined) {
+            if (typeof name !== "string" || name.trim().length === 0) return res.status(400).json({ error: "Invalid name" });
+            condition.push(`name = $${values.length + 1}`);
+            values.push(name);
+        }
+
+        if (email !== undefined) {
+            if (typeof email !== "string" || email.trim().length === 0) return res.status(400).json({ error: "Invalid email" });
+            condition.push(`email = $${values.length + 1}`);
+            values.push(email);
+        }
+
+        if (condition.length === 0) return res.status(400).json({ error: "No fields to update" });
+
+        const setClause = condition.length > 0 ? `${condition.join(", ")}` : "";
+        const results = await pool.query(
+            `update author set ${setClause} where id = $${values.length + 1} returning *`,
+            [...values, author_id]
+        );
+
+        if (results.rowCount === 0) return res.status(404).json({ error: "Author doesn't exists" });
+
+        return res.status(200).json(results.rows[0]);
+    } catch (error) {
+        if (error instanceof DatabaseError && error.code === "23505") {
+            return res.status(409).json({ error: "Email already exists" });
         }
         console.log(error);
         return res.status(500).json({ error: "Internal server error" });
