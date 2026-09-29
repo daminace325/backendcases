@@ -218,3 +218,39 @@ Pass user input as query parameters, never string concatenation:
 ```ts
 await pool.query("SELECT * FROM books WHERE id = $1", [id]);
 ```
+
+## Query Result Reference
+
+`pool.query()` resolves to a result object, not the rows themselves:
+
+```js
+{
+  command: 'SELECT',
+  rowCount: 3,
+  rows: [
+    { id: 1, name: 'Alice', email: 'alice@example.com' },
+    { id: 2, name: 'Bob', email: 'bob@example.com' },
+    { id: 3, name: 'Charlie', email: 'charlie@example.com' }
+  ],
+  fields: [
+    { name: 'id', dataTypeID: 23 },
+    { name: 'name', dataTypeID: 1043 },
+    { name: 'email', dataTypeID: 1043 }
+  ],
+  oid: null
+}
+```
+
+| Access | Use for |
+| --- | --- |
+| `result.rows` | List endpoints |
+| `result.rows[0]` | Single record, `undefined` when nothing matched |
+| `result.rows.length === 0` | 404 check on `SELECT` |
+| `result.rowCount` | Rows affected by `INSERT` / `UPDATE` / `DELETE` |
+
+Easy to forget:
+
+- `INSERT`, `UPDATE`, and `DELETE` return an empty `rows` unless the query ends with `RETURNING *`. Check `rowCount` instead.
+- `COUNT(*)` comes back as a string, not a number, so wrap it: `Number(result.rows[0].count)`.
+- Postgres lowercases unquoted column names, so `created_At` in the SQL is `created_at` on the row object.
+- `rows` is always an array, even for a single result.
