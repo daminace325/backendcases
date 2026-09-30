@@ -66,8 +66,9 @@ app.get("/book", async (req, res) => {
 
 app.post("/book", async (req, res) => {
     try {
-        const { author_id, title } = req.body;
-        if (typeof author_id !== "number" || author_id <= 0) return res.status(400).json({ error: "Invalid author id" });
+        const { id, title } = req.body;
+        const author_id = Number(id);
+        if (!Number.isInteger(author_id) || author_id <= 0) return res.status(400).json({ error: "Invalid author id" });
         if (typeof title !== "string" || title.trim().length === 0) return res.status(400).json({ error: "Title is required" });
         const result = await pool.query(
             "insert into book (author_id, title) values ($1, $2) returning *",
@@ -252,6 +253,37 @@ app.patch("/author/:id", async (req, res) => {
         }
         console.error(error);
         return res.status(500).json({ error: "Internal server error" });
+    }
+});
+
+app.post("/authorandbook", async (req, res) => {
+    const { name, email, title } = req.body;
+    if (typeof name !== "string" || name.trim().length === 0) return res.status(400).json({ error: "Invalid author name" });
+    if (typeof email !== "string" || email.trim().length === 0) return res.status(400).json({ error: "Invalid author email" });
+    if (typeof title !== "string" || title.trim().length === 0) return res.status(400).json({ error: "Invalid book title" });
+
+    const client = await pool.connect();
+    try {
+        await client.query('begin');
+
+        const result1 = await client.query(
+            'insert into author (name, email) values ($1, $2) returning *',
+            [name.trim(), email.trim()]
+        );
+        const author_id = Number(result1.rows[0].id);
+        const result2 = await client.query(
+            'insert into book (author_id, title) values ($1, $2) returning *',
+            [author_id, title.trim()]
+        );
+
+        await client.query('commit');
+        return res.status(201).json({ "author": result1.rows[0], "book": result2.rows[0] });
+    } catch (error) {
+        await client.query('rollback');
+        console.log(error);
+        return res.status(500).json({ error: "Internal server error " });
+    } finally {
+        client.release();
     }
 });
 
