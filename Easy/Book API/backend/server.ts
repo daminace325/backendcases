@@ -1,4 +1,5 @@
 import express from "express";
+import { error } from "node:console";
 import { DatabaseError, Pool } from "pg";
 
 const app = express();
@@ -271,6 +272,7 @@ app.post("/authorandbook", async (req, res) => {
             [name.trim(), email.trim()]
         );
         const author_id = Number(result1.rows[0].id);
+        // throw error; // to simulate the working of transaction
         const result2 = await client.query(
             'insert into book (author_id, title) values ($1, $2) returning *',
             [author_id, title.trim()]
