@@ -139,7 +139,7 @@ Database
 ## 8. Access PostgreSQL CLI
 
 ```bash
-docker exec -it <project-name>-postgres psql -U postgres -d <database-name>
+docker exec -it <project-name>-postgres psql -U <user-name> -d <database-name>
 ```
 
 ## 9. Create Database Schema
