@@ -219,7 +219,7 @@ Pass user input as query parameters, never string concatenation:
 await pool.query("SELECT * FROM books WHERE id = $1", [id]);
 ```
 
-## Query Result Reference
+## Query Result Structure (rows, rowCount)
 
 `pool.query()` resolves to a result object, not the rows themselves:
 
