@@ -30,21 +30,29 @@ const pool = new Pool({
 
 app.post("/url", async (req, res) => {
     const { originalUrl } = req.body;
-    const url = new URL(originalUrl);
+    if (typeof originalUrl !== "string") {
+        return res.status(400).json({ error: "URL is required" });
+    }
+    let url: URL;
+    try {
+        url = new URL(originalUrl);
+    } catch (error) {
+        return res.status(400).json({ error: "Invalid URL" });
+    }
     let finalRes;
     let attempt = 0;
     while (!finalRes && attempt < 5) {
         attempt++;
         try {
             if (url.protocol !== "http:" && url.protocol !== "https:") {
-                return res.status(400).json({ error: "Invalid URL" });
+                return res.status(400).json({ error: "URL must be HTTP/HTTPS" });
             }
             const shortCode = randomBytes(5).toString("base64url").slice(0, 7);
             const result = await pool.query(
                 "insert into urls (short_code, original_url) values ($1, $2) ON CONFLICT (short_code) DO NOTHING RETURNING *",
                 [shortCode, originalUrl]
             );
-            if(result.rows.length > 0) {
+            if (result.rows.length > 0) {
                 finalRes = result;
                 return res.status(201).json(result.rows[0]);
             }
