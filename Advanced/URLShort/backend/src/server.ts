@@ -61,4 +61,26 @@ app.post("/url", async (req, res) => {
         }
     }
     return res.status(409).json({ error: "Unqiue code cannot be generated" });
-})
+});
+
+app.get("/url/:id", async (req, res) => {
+    try {
+        const { id } = req.params;
+        const shortCode = String(id);
+        const result = await pool.query(
+            "update urls set click_count = click_count + 1 where short_code = $1 and (expires_at is null or expires_at > NOW()) returning *",
+            [shortCode]
+        );
+        if (result.rows.length === 0) {
+            const check = await pool.query(
+                "select id from urls where short_code = $1",
+                [shortCode]
+            );
+            if (check.rows.length === 0) return res.status(404).json({ error: "URL not found" });
+            return res.status(410).json({ error: "URL expired" });
+        }
+        return res.redirect(result.rows[0].original_url);
+    } catch (error) {
+        return res.status(500).json({ error: "Internal server error" });
+    }
+});
