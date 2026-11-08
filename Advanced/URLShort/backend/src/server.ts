@@ -29,13 +29,13 @@ const pool = new Pool({
 //     });
 
 app.post("/url", async (req, res) => {
+    const { originalUrl } = req.body;
+    const url = new URL(originalUrl);
     let finalRes;
     let attempt = 0;
     while (!finalRes && attempt < 5) {
         attempt++;
         try {
-            const { originalUrl } = req.body;
-            const url = new URL(originalUrl);
             if (url.protocol !== "http:" && url.protocol !== "https:") {
                 return res.status(400).json({ error: "Invalid URL" });
             }
@@ -44,9 +44,9 @@ app.post("/url", async (req, res) => {
                 "insert into urls (short_code, original_url) values ($1, $2) ON CONFLICT (short_code) DO NOTHING RETURNING *",
                 [shortCode, originalUrl]
             );
-            if(result.rowCount && result.rowCount > 0) {
+            if(result.rows.length > 0) {
                 finalRes = result;
-                return res.status(200).json(result.rows[0]);
+                return res.status(201).json(result.rows[0]);
             }
         } catch (error) {
             return res.status(500).json({ error: "Internal server error" });
