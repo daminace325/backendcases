@@ -54,7 +54,7 @@ app.post("/url", async (req, res) => {
             );
             if (result.rows.length > 0) {
                 finalRes = result;
-                return res.status(201).json(result.rows[0]);
+                return res.status(201).json(finalRes.rows[0]);
             }
         } catch (error) {
             return res.status(500).json({ error: "Internal server error" });
@@ -80,6 +80,29 @@ app.get("/url/:id", async (req, res) => {
             return res.status(410).json({ error: "URL expired" });
         }
         return res.redirect(result.rows[0].original_url);
+    } catch (error) {
+        return res.status(500).json({ error: "Internal server error" });
+    }
+});
+
+app.get("/api/url/:id", async (req, res) => {
+    try {
+        const { id } = req.params;
+        const shortCode = String(id);
+        const result = await pool.query(
+            "select * from urls where short_code = $1",
+            [shortCode]
+        );
+        if (result.rows.length === 0) {
+            return res.status(404).json({ error: "URL Not found" });
+        }
+        return res.status(200).json({
+            "shortCode": result.rows[0].short_code,
+            "originalUrl": result.rows[0].original_url,
+            "clickCount": result.rows[0].click_count,
+            "createdAt": result.rows[0].created_at,
+            "expiresAt": result.rows[0].expires_at
+        })
     } catch (error) {
         return res.status(500).json({ error: "Internal server error" });
     }
