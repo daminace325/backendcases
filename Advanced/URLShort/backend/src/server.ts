@@ -107,3 +107,18 @@ app.get("/api/url/:id", async (req, res) => {
         return res.status(500).json({ error: "Internal server error" });
     }
 });
+
+app.delete("/api/url/:id", async (req, res) => {
+    try {
+        const { id } = req.params;
+        const shortCode = String(id);
+        const result = await pool.query(
+            "delete from urls where short_code = $1 returning *",
+            [shortCode]
+        );
+        if (result.rows.length === 0) return res.status(404).json({ error: "URL Not found" });
+        return res.status(204).json(result.rows[0]);
+    } catch (error) {
+        return res.status(500).json({ error: "Internal server error" });
+    }
+})
