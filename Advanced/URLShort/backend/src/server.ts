@@ -28,6 +28,17 @@ const pool = new Pool({
 //         console.error("Database connection failed: ", err);
 //     });
 
+app.get("/url", async (req, res) => {
+    try {
+        const result = await pool.query(
+            "select * from urls"
+        );
+        return res.status(200).json(result.rows[0]);
+    } catch (error) {
+        return res.status(500).json({ error: "Internal server error" });
+    }
+});
+
 app.post("/url", async (req, res) => {
     const { originalUrl } = req.body;
     if (typeof originalUrl !== "string") {
@@ -118,6 +129,29 @@ app.delete("/api/url/:id", async (req, res) => {
         );
         if (result.rows.length === 0) return res.status(404).json({ error: "URL Not found" });
         return res.status(200).json(result.rows[0]);
+    } catch (error) {
+        return res.status(500).json({ error: "Internal server error" });
+    }
+})
+
+app.post("/api/url/:id/increment", async (req, res) => {
+    try {
+        const { id } = req.params;
+        const shortCode = String(id);
+        const select = await pool.query(
+            "select * from urls where short_code = $1",
+            [shortCode]
+        );
+        const url = select.rows[0];
+        if (select.rows.length === 0) return res.status(404).json({ error: "URL Not Found " });
+        if (select.rows[0].expires_at &&
+            new Date(select.rows[0].expires_at).getTime() <= Date.now()) return res.status(410).json({ error: "URL Expired" });
+        const newCount = select.rows[0].click_count + 1;
+        const result = await pool.query(
+            "update urls set click_count = $1 where short_code = $2 returning *",
+            [newCount, shortCode]
+        );
+        return res.status(201).json({ clickCount: result.rows[0].click_count });
     } catch (error) {
         return res.status(500).json({ error: "Internal server error" });
     }
