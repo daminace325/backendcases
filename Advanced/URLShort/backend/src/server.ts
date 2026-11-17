@@ -33,7 +33,7 @@ app.get("/url", async (req, res) => {
         const result = await pool.query(
             "select * from urls"
         );
-        return res.status(200).json(result.rows[0]);
+        return res.status(200).json(result.rows);
     } catch (error) {
         return res.status(500).json({ error: "Internal server error" });
     }
