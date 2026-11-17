@@ -156,3 +156,39 @@ app.post("/api/url/:id/increment", async (req, res) => {
         return res.status(500).json({ error: "Internal server error" });
     }
 })
+
+app.post("/api/url/transaction-test", async (req, res) => {
+    const client = await pool.connect();
+
+    try {
+        const { originalUrl } = req.body;
+
+        await client.query("BEGIN");
+
+        const shortCode = randomBytes(5).toString("base64url").slice(0, 7);
+
+        const result = await client.query(
+            `INSERT INTO urls (short_code, original_url)
+             VALUES ($1, $2)
+             RETURNING *`,
+            [shortCode, originalUrl]
+        );
+
+        // Simulate a failure after insertion
+        throw new Error("Simulated failure");
+
+        await client.query("COMMIT");
+
+        return res.status(201).json(result.rows[0]);
+
+    } catch (error) {
+        await client.query("ROLLBACK");
+
+        return res.status(500).json({
+            error: "Transaction failed"
+        });
+
+    } finally {
+        client.release();
+    }
+});
